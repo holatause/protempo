@@ -1,50 +1,67 @@
-import React from "react";
+import React, { useState, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   Wand2,
   X,
   MessageSquare,
   BrainCircuit,
   ChevronRight,
+  Send,
 } from "lucide-react";
 
-import { AISuggestion } from "@/lib/ai-suggestions";
+import { aiService } from "@/lib/api";
+import type { AIResponse } from "@/lib/api";
 
 interface AIAssistantPanelProps {
   isOpen?: boolean;
   onClose?: () => void;
-  suggestions?: AISuggestion[];
-  onSuggestionClick?: (suggestion: AISuggestion) => void;
+  context?: Record<string, any>;
 }
 
 const AIAssistantPanel = ({
   isOpen = true,
   onClose = () => {},
-  suggestions = [
-    {
-      id: "1",
-      type: "content",
-      content:
-        "Consider adding more visual elements to the social media campaign",
-    },
-    {
-      id: "2",
-      type: "optimization",
-      content:
-        "The current blog post could be optimized for better SEO performance",
-    },
-    {
-      id: "3",
-      type: "strategy",
-      content:
-        "Based on analytics, posting time could be adjusted to 3 PM for better engagement",
-    },
-  ],
+  context = {},
 }: AIAssistantPanelProps) => {
+  const [loading, setLoading] = useState(false);
+  const [input, setInput] = useState("");
+  const [suggestions, setSuggestions] = useState<AIResponse[]>([]);
+
+  const loadSuggestions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const newSuggestions = await aiService.getSuggestions(context);
+      setSuggestions(newSuggestions);
+    } catch (error) {
+      console.error("Error loading suggestions:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [context]);
+
+  const handleSendPrompt = async () => {
+    if (!input.trim()) return;
+
+    try {
+      setLoading(true);
+      const response = await aiService.generateContent({
+        prompt: input,
+        context,
+        type: "text",
+      });
+      setSuggestions((prev) => [response, ...prev]);
+      setInput("");
+    } catch (error) {
+      console.error("Error generating content:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <Card
       className={`fixed right-0 top-0 h-screen w-[400px] bg-white shadow-lg transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
@@ -59,7 +76,7 @@ const AIAssistantPanel = ({
         </Button>
       </div>
 
-      <ScrollArea className="h-[calc(100vh-64px)] p-4">
+      <ScrollArea className="h-[calc(100vh-140px)] p-4">
         <div className="space-y-6">
           <section>
             <h3 className="text-sm font-medium text-gray-500 mb-3">
@@ -121,6 +138,24 @@ const AIAssistantPanel = ({
           </section>
         </div>
       </ScrollArea>
+
+      <div className="p-4 border-t">
+        <div className="flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask AI Assistant..."
+            onKeyPress={(e) => e.key === "Enter" && handleSendPrompt()}
+            disabled={loading}
+          />
+          <Button
+            onClick={handleSendPrompt}
+            disabled={loading || !input.trim()}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </Card>
   );
 };

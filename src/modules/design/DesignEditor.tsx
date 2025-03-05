@@ -3,6 +3,7 @@ import * as fabric from "fabric";
 import Canvas from "./components/Canvas";
 import Toolbar from "./components/Toolbar";
 import AIGenerator from "./components/AIGenerator";
+import AISuggestionsPanel from "./components/AISuggestionsPanel";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const DesignEditor = () => {
@@ -50,17 +51,20 @@ const DesignEditor = () => {
     canvas.add(text);
   };
 
-  const handleAddImage = () => {
+  const handleAddImage = (url?: string) => {
     const canvas = fabric.Canvas.getActiveCanvas();
     if (!canvas) return;
 
-    fabric.Image.fromURL(
-      "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=200",
-      (img) => {
-        img.scale(0.5);
-        canvas.add(img);
-      },
-    );
+    const imageUrl =
+      url ||
+      "https://images.unsplash.com/photo-1682687220742-aba13b6e50ba?q=80&w=200";
+
+    fabric.Image.fromURL(imageUrl, (img) => {
+      img.scale(0.5);
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      canvas.renderAll();
+    });
   };
 
   return (
@@ -71,16 +75,24 @@ const DesignEditor = () => {
         onAddImage={handleAddImage}
         onGenerateAI={() => setIsAIDialogOpen(true)}
       />
-      <div className="flex-1 p-8 flex justify-center items-start overflow-auto">
-        <Canvas width={800} height={600} onSelect={setSelectedObject} />
+      <div className="flex-1 p-8 flex overflow-hidden">
+        <div className="flex-1 flex justify-center items-start overflow-auto">
+          <Canvas width={800} height={600} onSelect={setSelectedObject} />
+        </div>
+        <AISuggestionsPanel
+          onApplySuggestion={(suggestion) => {
+            // TODO: Implementar aplicación de sugerencias
+            console.log("Applying suggestion:", suggestion);
+          }}
+        />
       </div>
 
       <Dialog open={isAIDialogOpen} onOpenChange={setIsAIDialogOpen}>
         <DialogContent>
           <AIGenerator
             onGenerate={(image) => {
+              handleAddImage(image);
               setIsAIDialogOpen(false);
-              // Aquí se implementará la generación de imágenes con IA
             }}
           />
         </DialogContent>

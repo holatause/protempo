@@ -1,6 +1,5 @@
 import React from "react";
-import ProjectHeader from "./ProjectHeader";
-import TaskBoard from "./TaskBoard";
+import MainContent from "./MainContent";
 import AIAssistantPanel from "./AIAssistantPanel";
 
 interface ProjectOverviewProps {
@@ -14,11 +13,6 @@ interface ProjectOverviewProps {
   showAIPanel?: boolean;
 }
 
-import {
-  generateProjectSuggestions,
-  generateTaskSuggestions,
-  AISuggestion,
-} from "@/lib/ai-suggestions";
 import { useTaskStore } from "@/store/tasks";
 
 const ProjectOverview = ({
@@ -38,54 +32,27 @@ const ProjectOverview = ({
     return columns.flatMap((col) => col.tasks);
   }, [columns]);
 
-  const suggestions = React.useMemo(() => {
-    const projectSuggestions = generateProjectSuggestions(allTasks);
-    const taskSuggestions = allTasks.flatMap((task) =>
-      generateTaskSuggestions(task),
-    );
-    return [...projectSuggestions, ...taskSuggestions];
-  }, [allTasks]);
-
-  const handleSuggestionClick = (suggestion: AISuggestion) => {
-    // Si la sugerencia está relacionada con una tarea específica
-    if (suggestion.taskId) {
-      // Encuentra la columna y la tarea
-      const column = columns.find((col) =>
-        col.tasks.some((task) => task.id === suggestion.taskId),
-      );
-      if (column) {
-        const task = column.tasks.find((t) => t.id === suggestion.taskId);
-        if (task) {
-          // Aquí podrías abrir el diálogo de edición de tarea
-          console.log("Abrir tarea:", task);
-        }
-      }
-    }
-  };
+  const context = React.useMemo(() => {
+    return {
+      project,
+      tasks: allTasks,
+      taskCount: allTasks.length,
+      highPriorityCount: allTasks.filter((t) => t.priority === "high").length,
+    };
+  }, [allTasks, project]);
 
   return (
     <div className="bg-gray-50 min-h-screen w-full p-6 relative">
       <div
         className={`transition-all duration-300 ${isAIPanelOpen ? "mr-[400px]" : "mr-0"}`}
       >
-        <div className="space-y-6">
-          <ProjectHeader
-            title={project.title}
-            status={project.status}
-            startDate={project.startDate}
-            teamSize={project.teamSize}
-            progress={project.progress}
-          />
-
-          <TaskBoard />
-        </div>
+        <MainContent project={project} />
       </div>
 
       <AIAssistantPanel
         isOpen={isAIPanelOpen}
         onClose={() => setIsAIPanelOpen(false)}
-        suggestions={suggestions}
-        onSuggestionClick={handleSuggestionClick}
+        context={context}
       />
     </div>
   );

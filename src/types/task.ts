@@ -17,16 +17,21 @@ export type Column = {
 
 export type TaskState = {
   columns: Column[];
+  isLoading: boolean;
+  error: string | null;
+  currentProjectId: string | null;
+  fetchTasks: (projectId: string) => Promise<void>;
   moveTask: (
     sourceCol: string,
     destCol: string,
     sourceIndex: number,
     destIndex: number,
-  ) => void;
-  addTask: (columnId: string, task: Task) => void;
+  ) => Promise<void>;
+  addTask: (columnId: string, task: Task) => Promise<void>;
   updateTask: (
     columnId: string,
     taskId: string,
     updates: Partial<Task>,
-  ) => void;
+  ) => Promise<void>;
+  deleteTask: (columnId: string, taskId: string) => Promise<void>;
 };
