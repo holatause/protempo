@@ -141,7 +141,7 @@ const UTMBuilder = () => {
     }
   };
 
-  const handleSaveUTM = () => {
+  const handleSaveUTM = async () => {
     if (
       !utmName ||
       !utmParams.url ||
@@ -153,16 +153,36 @@ const UTMBuilder = () => {
       return;
     }
 
-    const newUTM: SavedUTM = {
-      id: Date.now().toString(),
-      name: utmName,
-      ...utmParams,
-      createdAt: new Date(),
-    };
+    try {
+      // En una implementación real, esto guardaría en Supabase
+      // import { createUTM } from '@/lib/api/marketing';
+      // await createUTM({
+      //   name: utmName,
+      //   url: utmParams.url,
+      //   source: utmParams.source,
+      //   medium: utmParams.medium,
+      //   campaign: utmParams.campaign,
+      //   term: utmParams.term,
+      //   content: utmParams.content
+      // });
 
-    setSavedUTMs([newUTM, ...savedUTMs]);
-    setUtmName("");
-    alert("UTM guardado correctamente");
+      // Para la demo, simulamos el guardado
+      const newUTM: SavedUTM = {
+        id: Date.now().toString(),
+        name: utmName,
+        ...utmParams,
+        createdAt: new Date(),
+      };
+
+      setSavedUTMs([newUTM, ...savedUTMs]);
+      setUtmName("");
+      alert("UTM guardado correctamente");
+    } catch (error) {
+      console.error("Error saving UTM:", error);
+      alert(
+        "Ha ocurrido un error al guardar el UTM. Por favor, intenta de nuevo.",
+      );
+    }
   };
 
   const handleLoadUTM = (utm: SavedUTM) => {

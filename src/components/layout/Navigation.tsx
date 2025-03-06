@@ -11,6 +11,7 @@ import {
   Users,
   Settings,
   Megaphone,
+  Sparkles,
 } from "lucide-react";
 
 const Navigation = () => {
@@ -44,6 +45,12 @@ const Navigation = () => {
         <Button variant="outline" className="flex gap-2">
           <Megaphone className="w-4 h-4" />
           Marketing
+        </Button>
+      </Link>
+      <Link to="/ai-tools">
+        <Button variant="outline" className="flex gap-2">
+          <Sparkles className="w-4 h-4" />
+          IA
         </Button>
       </Link>
       <Link to="/design">

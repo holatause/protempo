@@ -12,6 +12,7 @@ import UnifiedDashboardPage from "./pages/UnifiedDashboardPage";
 import CollaborationPage from "./pages/CollaborationPage";
 import PreferencesPage from "./pages/PreferencesPage";
 import MarketingToolsPage from "./pages/MarketingToolsPage";
+import AIToolsPage from "./pages/AIToolsPage";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { authService } from "./lib/supabase";
 
@@ -74,6 +75,7 @@ function App() {
           <Route path="/collaboration" element={<CollaborationPage />} />
           <Route path="/design" element={<DesignPage />} />
           <Route path="/marketing-tools" element={<MarketingToolsPage />} />
+          <Route path="/ai-tools" element={<AIToolsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/preferences" element={<PreferencesPage />} />
           <Route path="/superadmin" element={<SuperAdminPage />} />

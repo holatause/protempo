@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -305,7 +305,7 @@ const mockSavedContent: SavedContent[] = [
   },
 ];
 
-const ContentGenerator = () => {
+const ContentGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState("templates");
   const [selectedTemplate, setSelectedTemplate] =
     useState<ContentTemplate | null>(null);
@@ -316,6 +316,22 @@ const ContentGenerator = () => {
   const [savedContent, setSavedContent] =
     useState<SavedContent[]>(mockSavedContent);
   const [copied, setCopied] = useState(false);
+  const [historyContent, setHistoryContent] = useState<any[]>([]);
+
+  // Cargar historial al iniciar
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const { getPromptHistory } = await import("@/lib/api/ai");
+        const history = await getPromptHistory("content", 10);
+        setHistoryContent(history);
+      } catch (error) {
+        console.error("Error loading history:", error);
+      }
+    };
+
+    loadHistory();
+  }, []);
 
   const handleTemplateSelect = (template: ContentTemplate) => {
     setSelectedTemplate(template);
@@ -330,7 +346,7 @@ const ContentGenerator = () => {
     }));
   };
 
-  const handleGenerateContent = () => {
+  const handleGenerateContent = async () => {
     // Validate required fields
     const missingFields = selectedTemplate?.fields
       .filter((field) => field.required && !formValues[field.name])
@@ -345,12 +361,54 @@ const ContentGenerator = () => {
 
     setIsGenerating(true);
 
-    // Simulate content generation with a delay
-    setTimeout(() => {
-      const content = generateContentBasedOnTemplate();
+    try {
+      // Intentar usar la API real
+      let content = "";
+
+      try {
+        const { generateAIContent, savePromptHistory } = await import(
+          "@/lib/api/ai"
+        );
+
+        // Crear un prompt estructurado para la IA
+        const promptData = {
+          template: selectedTemplate?.title,
+          category: selectedTemplate?.category,
+          platform: selectedTemplate?.platform,
+          fields: formValues,
+        };
+
+        const response = await generateAIContent({
+          prompt: JSON.stringify(promptData),
+          type: "text",
+          options: { category: selectedTemplate?.category },
+        });
+
+        content = response.content;
+
+        // Guardar en historial
+        await savePromptHistory(JSON.stringify(promptData), content, "content");
+
+        // Actualizar historial local
+        const { getPromptHistory } = await import("@/lib/api/ai");
+        const history = await getPromptHistory("content", 10);
+        setHistoryContent(history);
+      } catch (apiError) {
+        console.warn("API call failed, using fallback content", apiError);
+        // Simulamos la respuesta para la demo
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        content = generateContentBasedOnTemplate();
+      }
+
       setGeneratedContent(content);
+    } catch (error) {
+      console.error("Error generating content:", error);
+      alert(
+        "Ha ocurrido un error al generar el contenido. Por favor, intenta de nuevo.",
+      );
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const generateContentBasedOnTemplate = (): string => {
@@ -431,7 +489,7 @@ const ContentGenerator = () => {
     return intros[Math.floor(Math.random() * intros.length)];
   };
 
-  const handleSaveContent = () => {
+  const handleSaveContent = async () => {
     if (!contentTitle.trim()) {
       alert("Por favor, añade un título para guardar el contenido");
       return;
@@ -442,16 +500,44 @@ const ContentGenerator = () => {
       return;
     }
 
-    const newContent: SavedContent = {
-      id: Date.now().toString(),
-      title: contentTitle,
-      content: generatedContent,
-      category: selectedTemplate?.category || "other",
-      platform: selectedTemplate?.platform,
-      createdAt: new Date(),
-    };
+    try {
+      // Intentar guardar en la base de datos
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    setSavedContent([newContent, ...savedContent]);
+      // Guardar en la tabla ai_generated_content
+      const { error } = await supabase.from("ai_generated_content").insert({
+        title: contentTitle,
+        content: generatedContent,
+        category: selectedTemplate?.category || "other",
+        platform: selectedTemplate?.platform,
+        is_favorite: false,
+      });
+
+      if (error) {
+        console.error("Error guardando en base de datos:", error);
+        throw error;
+      }
+    } catch (dbError) {
+      console.warn(
+        "Error al guardar en la base de datos, guardando localmente",
+        dbError,
+      );
+      // Si falla la BD, guardar localmente
+      const newContent: SavedContent = {
+        id: Date.now().toString(),
+        title: contentTitle,
+        content: generatedContent,
+        category: selectedTemplate?.category || "other",
+        platform: selectedTemplate?.platform,
+        createdAt: new Date(),
+      };
+
+      setSavedContent([newContent, ...savedContent]);
+    }
+
     setContentTitle("");
     alert("Contenido guardado correctamente");
   };
@@ -778,7 +864,7 @@ const ContentGenerator = () => {
                 </Button>
               </div>
 
-              {savedContent.length === 0 ? (
+              {savedContent.length === 0 && historyContent.length === 0 ? (
                 <div className="text-center py-12">
                   <Save className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium">
@@ -798,6 +884,7 @@ const ContentGenerator = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Contenido guardado localmente */}
                   {savedContent.map((content) => (
                     <Card key={content.id} className="p-4">
                       <div className="space-y-3">
@@ -862,6 +949,53 @@ const ContentGenerator = () => {
                       </div>
                     </Card>
                   ))}
+
+                  {/* Contenido del historial de Supabase */}
+                  {historyContent.length > 0 && (
+                    <>
+                      <Separator />
+                      <h3 className="text-md font-semibold">Historial</h3>
+
+                      {historyContent.map((item) => (
+                        <Card key={item.id} className="p-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-primary" />
+                                <h3 className="font-semibold">
+                                  Contenido generado
+                                </h3>
+                              </div>
+                              <span className="text-xs text-gray-500">
+                                {new Date(item.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+
+                            <div className="border rounded-md p-3 whitespace-pre-line text-sm">
+                              {item.response.length > 200
+                                ? `${item.response.substring(0, 200)}...`
+                                : item.response}
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopyContent(item.response)}
+                                className="h-8 px-2"
+                              >
+                                {copied ? (
+                                  <Check className="w-4 h-4" />
+                                ) : (
+                                  <Copy className="w-4 h-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
+                    </>
+                  )}
                 </div>
               )}
             </div>

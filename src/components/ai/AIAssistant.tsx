@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
@@ -96,7 +95,7 @@ const initialMessages: Message[] = [
   },
 ];
 
-const AIAssistant = () => {
+const AIAssistant: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputValue, setInputValue] = useState("");
   const [activeTab, setActiveTab] = useState("chat");
@@ -112,7 +111,7 @@ const AIAssistant = () => {
     }
   }, [messages]);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     // Add user message
@@ -136,8 +135,32 @@ const AIAssistant = () => {
     setInputValue("");
     setIsGenerating(true);
 
-    // Simulate AI response after delay
-    setTimeout(() => {
+    try {
+      // Intenta usar la API real, pero si falla usa la respuesta simulada
+      let aiResponse = "";
+
+      try {
+        // Importación dinámica para evitar errores si el archivo no existe
+        const { generateAIContent, savePromptHistory } = await import(
+          "@/lib/api/ai"
+        );
+        const response = await generateAIContent({
+          prompt: inputValue,
+          type: "text",
+          options: { role: "marketing_assistant" },
+        });
+
+        aiResponse = response.content;
+
+        // Guardar en historial
+        await savePromptHistory(inputValue, aiResponse, "assistant");
+      } catch (apiError) {
+        console.warn("API call failed, using fallback response", apiError);
+        // Simulamos la respuesta para la demo si la API falla
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        aiResponse = generateResponse(inputValue);
+      }
+
       // Remove loading message and add real response
       setMessages((prev) => {
         const filtered = prev.filter((msg) => !msg.isLoading);
@@ -146,13 +169,30 @@ const AIAssistant = () => {
           {
             id: Date.now().toString(),
             role: "assistant",
-            content: generateResponse(inputValue),
+            content: aiResponse,
             timestamp: new Date(),
           },
         ];
       });
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      // Mostrar mensaje de error
+      setMessages((prev) => {
+        const filtered = prev.filter((msg) => !msg.isLoading);
+        return [
+          ...filtered,
+          {
+            id: Date.now().toString(),
+            role: "assistant",
+            content:
+              "Lo siento, ha ocurrido un error al procesar tu solicitud. Por favor, intenta de nuevo más tarde.",
+            timestamp: new Date(),
+          },
+        ];
+      });
+    } finally {
       setIsGenerating(false);
-    }, 2000);
+    }
   };
 
   const generateResponse = (input: string): string => {
@@ -426,9 +466,9 @@ const AIAssistant = () => {
             <div className="p-4 border-t">
               <div className="flex gap-2">
                 <Input
-                  placeholder="Escribe un mensaje..."
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
+                  placeholder="Escribe un mensaje..."
                   onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
                   disabled={isGenerating}
                   className="flex-1"
