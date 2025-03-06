@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,9 @@ import {
   Linkedin,
   Mail,
 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import CampaignAnalytics from "./CampaignAnalytics";
+import { trackCampaignMetric } from "@/lib/api/analytics";
 
 interface Campaign {
   id: string;
@@ -188,6 +191,119 @@ const CampaignPlanner = () => {
     status: "draft",
     tags: [],
   });
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
+  // Efecto para simular la actualización de métricas para campañas activas
+  useEffect(() => {
+    // Solo ejecutar en producción o cuando esté conectado a Supabase
+    if (!import.meta.env.VITE_SUPABASE_URL) return;
+
+    // Intervalo para simular eventos de campaña (cada 30 segundos)
+    const interval = setInterval(() => {
+      // Obtener campañas activas
+      const activeCampaigns = campaigns.filter((c) => c.status === "active");
+
+      if (activeCampaigns.length === 0) return;
+
+      // Seleccionar una campaña aleatoria de las activas
+      const randomCampaign =
+        activeCampaigns[Math.floor(Math.random() * activeCampaigns.length)];
+
+      // Tipos de métricas a simular
+      const metricTypes: (
+        | "impression"
+        | "click"
+        | "conversion"
+        | "engagement"
+        | "reach"
+      )[] = ["impression", "click", "conversion", "engagement", "reach"];
+
+      // Seleccionar un tipo de métrica aleatorio
+      const randomMetricType =
+        metricTypes[Math.floor(Math.random() * metricTypes.length)];
+
+      // Generar un valor aleatorio según el tipo de métrica
+      let value = 1;
+      switch (randomMetricType) {
+        case "impression":
+          value = Math.floor(Math.random() * 100) + 50; // 50-150 impresiones
+          break;
+        case "click":
+          value = Math.floor(Math.random() * 10) + 1; // 1-10 clics
+          break;
+        case "conversion":
+          value = Math.random() > 0.7 ? 1 : 0; // 30% de probabilidad de conversión
+          break;
+        case "engagement":
+          value = Math.floor(Math.random() * 20) + 5; // 5-25 interacciones
+          break;
+        case "reach":
+          value = Math.floor(Math.random() * 80) + 30; // 30-110 alcance
+          break;
+      }
+
+      // Fuentes posibles para las métricas
+      const sources = [
+        "instagram",
+        "facebook",
+        "twitter",
+        "linkedin",
+        "email",
+        "web",
+      ];
+      const randomSource = sources[Math.floor(Math.random() * sources.length)];
+
+      // Registrar la métrica en Supabase
+      trackCampaignMetric({
+        campaign_id: randomCampaign.id,
+        metric_type: randomMetricType,
+        value,
+        source: randomSource,
+      }).catch((error) => {
+        console.warn("Error tracking campaign metric:", error);
+      });
+
+      // Actualizar el progreso de la campaña localmente
+      if (randomMetricType === "conversion") {
+        setCampaigns((prevCampaigns) => {
+          return prevCampaigns.map((campaign) => {
+            if (campaign.id === randomCampaign.id) {
+              // Actualizar KPIs relevantes
+              const updatedKpis = campaign.kpis.map((kpi) => {
+                if (
+                  kpi.name === "Ventas" ||
+                  kpi.name === "Registros" ||
+                  kpi.name === "Nuevos clientes"
+                ) {
+                  return { ...kpi, current: kpi.current + value };
+                }
+                return kpi;
+              });
+
+              // Calcular nuevo progreso basado en KPIs
+              const totalTarget = campaign.kpis.reduce(
+                (sum, kpi) => sum + kpi.target,
+                0,
+              );
+              const totalCurrent = updatedKpis.reduce(
+                (sum, kpi) => sum + kpi.current,
+                0,
+              );
+              const newProgress = Math.min(
+                Math.round((totalCurrent / totalTarget) * 100),
+                100,
+              );
+
+              return { ...campaign, kpis: updatedKpis, progress: newProgress };
+            }
+            return campaign;
+          });
+        });
+      }
+    }, 30000); // Cada 30 segundos
+
+    return () => clearInterval(interval);
+  }, [campaigns]);
 
   const getStatusBadge = (status: Campaign["status"]) => {
     switch (status) {
@@ -324,6 +440,61 @@ const CampaignPlanner = () => {
           c.id === updatedCampaign.id ? updatedCampaign : c,
         ),
       );
+    }
+  };
+
+  const handleActivateCampaign = () => {
+    if (!selectedCampaign) return;
+
+    const updatedCampaign = {
+      ...selectedCampaign,
+      status: "active" as const,
+    };
+
+    setSelectedCampaign(updatedCampaign);
+    setCampaigns(
+      campaigns.map((c) => (c.id === updatedCampaign.id ? updatedCampaign : c)),
+    );
+
+    // Registrar evento de inicio de campaña
+    trackCampaignMetric({
+      campaign_id: selectedCampaign.id,
+      metric_type: "impression",
+      value: 100, // Impresiones iniciales
+      source: "campaign_start",
+    }).catch((error) => {
+      console.warn("Error tracking campaign start:", error);
+    });
+
+    alert(`Campaña "${selectedCampaign.title}" activada correctamente.`);
+  };
+
+  const handlePauseCampaign = () => {
+    if (!selectedCampaign) return;
+
+    const updatedCampaign = {
+      ...selectedCampaign,
+      status: "paused" as const,
+    };
+
+    setSelectedCampaign(updatedCampaign);
+    setCampaigns(
+      campaigns.map((c) => (c.id === updatedCampaign.id ? updatedCampaign : c)),
+    );
+
+    alert(`Campaña "${selectedCampaign.title}" pausada correctamente.`);
+  };
+
+  const handleDeleteCampaign = () => {
+    if (!selectedCampaign) return;
+
+    if (
+      confirm(
+        `¿Estás seguro de eliminar la campaña "${selectedCampaign.title}"?`,
+      )
+    ) {
+      setCampaigns(campaigns.filter((c) => c.id !== selectedCampaign.id));
+      setSelectedCampaign(null);
     }
   };
 
@@ -749,22 +920,23 @@ const CampaignPlanner = () => {
                     variant="outline"
                     size="sm"
                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleDeleteCampaign}
                   >
                     <Trash2 className="w-4 h-4 mr-2" /> Eliminar
                   </Button>
 
                   <div className="flex gap-2">
                     {selectedCampaign.status === "draft" && (
-                      <Button>
+                      <Button onClick={handleActivateCampaign}>
                         <CheckCircle className="w-4 h-4 mr-2" /> Activar Campaña
                       </Button>
                     )}
                     {selectedCampaign.status === "active" && (
-                      <Button variant="outline">
+                      <Button variant="outline" onClick={handlePauseCampaign}>
                         <Clock className="w-4 h-4 mr-2" /> Pausar
                       </Button>
                     )}
-                    <Button>
+                    <Button onClick={() => setShowAnalytics(true)}>
                       <BarChart className="w-4 h-4 mr-2" /> Ver Analíticas
                     </Button>
                   </div>
@@ -790,6 +962,19 @@ const CampaignPlanner = () => {
           </div>
         </div>
       </CardContent>
+
+      {/* Modal de Analíticas */}
+      <Dialog open={showAnalytics} onOpenChange={setShowAnalytics}>
+        <DialogContent className="max-w-4xl p-0">
+          {selectedCampaign && (
+            <CampaignAnalytics
+              campaignId={selectedCampaign.id}
+              campaignName={selectedCampaign.title}
+              onClose={() => setShowAnalytics(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
