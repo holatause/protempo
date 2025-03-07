@@ -12,11 +12,14 @@ import {
   Settings,
   Megaphone,
   Sparkles,
+  Trophy,
+  Shield,
+  Bot,
 } from "lucide-react";
 
 const Navigation = () => {
   return (
-    <Card className="p-4 mb-8 flex justify-center gap-4">
+    <Card className="p-4 mb-8 flex flex-wrap justify-center gap-4 bg-white/90 backdrop-blur shadow-lg border-none">
       <Link to="/">
         <Button variant="outline" className="flex gap-2">
           <Home className="w-4 h-4" />
@@ -69,6 +72,27 @@ const Navigation = () => {
         <Button variant="outline" className="flex gap-2">
           <Settings className="w-4 h-4" />
           Preferencias
+        </Button>
+      </Link>
+      <Link to="/gamification">
+        <Button
+          variant="outline"
+          className="flex gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 border-none"
+        >
+          <Trophy className="w-4 h-4" />
+          Gamificación
+        </Button>
+      </Link>
+      <Link to="/agent-builder">
+        <Button variant="outline" className="flex gap-2">
+          <Bot className="w-4 h-4" />
+          Agentes IA
+        </Button>
+      </Link>
+      <Link to="/admin">
+        <Button variant="outline" className="flex gap-2">
+          <Shield className="w-4 h-4" />
+          Admin
         </Button>
       </Link>
     </Card>
