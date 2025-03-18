@@ -36,5 +36,5 @@ CREATE POLICY "Users can delete their own images"
   ON ai_generated_images FOR DELETE
   USING (auth.uid() = user_id);
 
--- Add to realtime publication
-ALTER PUBLICATION supabase_realtime ADD TABLE ai_generated_images;
+-- Add to realtime publication (comentado para evitar errores si ya existe)
+-- ALTER PUBLICATION supabase_realtime ADD TABLE ai_generated_images;

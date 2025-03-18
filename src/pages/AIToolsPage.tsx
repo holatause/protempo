@@ -5,7 +5,8 @@ import Navigation from "@/components/layout/Navigation";
 import AIAssistant from "@/components/ai/AIAssistant";
 import ContentGenerator from "@/components/ai/ContentGenerator";
 import ImageGenerator from "@/components/ai/ImageGenerator";
-import { Sparkles, FileText, Image as ImageIcon } from "lucide-react";
+import TauseProAssistant from "@/components/ai/TauseProAssistant";
+import { Sparkles, FileText, Image as ImageIcon, MapPin } from "lucide-react";
 
 const AIToolsPage = () => {
   const [activeTab, setActiveTab] = useState("assistant");
@@ -23,7 +24,7 @@ const AIToolsPage = () => {
         </Card>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="assistant" className="flex items-center gap-2">
               <Sparkles className="w-4 h-4" />
               Asistente de Marketing
@@ -35,6 +36,10 @@ const AIToolsPage = () => {
             <TabsTrigger value="images" className="flex items-center gap-2">
               <ImageIcon className="w-4 h-4" />
               Generador de Imágenes
+            </TabsTrigger>
+            <TabsTrigger value="tausepro" className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Tause Pro
             </TabsTrigger>
           </TabsList>
 
@@ -48,6 +53,10 @@ const AIToolsPage = () => {
 
           <TabsContent value="images">
             <ImageGenerator />
+          </TabsContent>
+
+          <TabsContent value="tausepro">
+            <TauseProAssistant />
           </TabsContent>
         </Tabs>
       </div>

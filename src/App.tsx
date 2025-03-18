@@ -10,6 +10,9 @@ import ProfilePage from "./pages/ProfilePage";
 import SuperAdminPage from "./pages/SuperAdminPage";
 import AdminPage from "./pages/AdminPage";
 import UnifiedDashboardPage from "./pages/UnifiedDashboardPage";
+import TauseProDashboardPage from "./pages/TauseProDashboardPage";
+import CampaignManagerPage from "./pages/CampaignManagerPage";
+import ContentCalendarPage from "./pages/ContentCalendarPage";
 import CollaborationPage from "./pages/CollaborationPage";
 import PreferencesPage from "./pages/PreferencesPage";
 import MarketingToolsPage from "./pages/MarketingToolsPage";
@@ -17,6 +20,7 @@ import AIToolsPage from "./pages/AIToolsPage";
 import GamificationPage from "./pages/GamificationPage";
 import AgentBuilderPage from "./pages/AgentBuilderPage";
 import LandingPage from "./pages/LandingPage";
+import DemoPage from "./pages/DemoPage";
 import { ThemeProvider } from "./components/theme/ThemeProvider";
 import { authService } from "./lib/supabase";
 
@@ -71,11 +75,15 @@ function App() {
       >
         {import.meta.env.VITE_TEMPO && useRoutes(routes)}
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={<TauseProDashboardPage />} />
+          <Route path="/landing" element={<LandingPage />} />
           <Route path="/home" element={<Home />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/tausepro" element={<TauseProDashboardPage />} />
+          <Route path="/campanas" element={<CampaignManagerPage />} />
+          <Route path="/calendario" element={<ContentCalendarPage />} />
           <Route path="/unified-dashboard" element={<UnifiedDashboardPage />} />
           <Route path="/collaboration" element={<CollaborationPage />} />
           <Route path="/design" element={<DesignPage />} />
